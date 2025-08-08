@@ -14,18 +14,8 @@ A web-based application for tracking volleyball statistics during games. This to
 
 Simply open `index.html` in your web browser to start using the application. Click on different areas of the volleyball court to record various game events and view statistics in real-time.
 
-## Technologies Used
-
-- HTML5
-- CSS3
-- JavaScript (Vanilla)
-
 ## Getting Started
 
 1. Clone this repository
 2. Open `index.html` in your web browser
 3. Start tracking your volleyball game statistics!
-
-## License
-
-This project is open source and available under the MIT License. 
