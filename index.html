@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volleyball Court Stat Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            font-weight: 400;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .court-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .volleyball-court {
+            width: 540px;
+            height: 270px;
+            border: 3px solid #333;
+            background: #8B4513;
+            position: relative;
+            cursor: crosshair;
+            margin-bottom: 20px;
+        }
+
+        /* Error boundary for serves */
+        .error-boundary {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            border: 2px dashed #e74c3c;
+            pointer-events: auto;
+            z-index: 1;
+            cursor: crosshair;
+        }
+
+        /* Court lines */
+        .center-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: white;
+            transform: translateX(-50%);
+        }
+
+        .attack-line-left {
+            position: absolute;
+            top: 0;
+            left: 30%;
+            width: 2px;
+            height: 100%;
+            background: white;
+        }
+
+        .attack-line-right {
+            position: absolute;
+            top: 0;
+            right: 30%;
+            width: 2px;
+            height: 100%;
+            background: white;
+        }
+
+        .net {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            width: 3px;
+            height: 286px;
+            background: #333;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .side-label {
+            position: absolute;
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            z-index: 5;
+        }
+
+        .home-label {
+            bottom: 10px;
+            left: 25%;
+            transform: translateX(-50%);
+        }
+
+        .away-label {
+            top: 10px;
+            right: 25%;
+            transform: translateX(50%);
+        }
+
+        .hit-marker {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+
+        .hit-marker:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            z-index: 20;
+        }
+
+        .hit-marker.uncoded {
+            background-color: #95a5a6;
+            animation: pulse 2s infinite;
+        }
+
+        .hit-marker.serve { background-color: #9b59b6; }
+        .hit-marker.reception { background-color: #2ecc71; }
+        .hit-marker.set { background-color: #3498db; }
+        .hit-marker.attack { background-color: #e74c3c; }
+        .hit-marker.dig { background-color: #f39c12; }
+        .hit-marker.freeball { background-color: #1abc9c; }
+        .hit-marker.error { background-color: #e74c3c; }
+
+        .trajectory-line {
+            position: absolute;
+            height: 4px;
+            background: #ff0000;
+            transform-origin: left center;
+            z-index: 25;
+            pointer-events: none;
+            border-radius: 2px;
+            box-shadow: 0 0 6px rgba(255, 0, 0, 0.8);
+            opacity: 1;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        .btn-primary { background-color: #3498db; color: white; }
+        .btn-secondary { background-color: #95a5a6; color: white; }
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .btn-success { background-color: #27ae60; color: white; }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .code-input {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            resize: vertical;
+        }
+
+        .code-input:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .heat-map-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .heat-map-btn {
+            padding: 8px 16px;
+            border: 2px solid;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .heat-map-btn.serve { border-color: #9b59b6; color: #9b59b6; }
+        .heat-map-btn.reception { border-color: #2ecc71; color: #2ecc71; }
+        .heat-map-btn.set { border-color: #3498db; color: #3498db; }
+        .heat-map-btn.attack { border-color: #e74c3c; color: #e74c3c; }
+
+        .heat-map-btn.active {
+            color: white !important;
+        }
+
+        .heat-map-btn.serve.active { background: #9b59b6; }
+        .heat-map-btn.reception.active { background: #2ecc71; }
+        .heat-map-btn.set.active { background: #3498db; }
+        .heat-map-btn.attack.active { background: #e74c3c; }
+
+        .filter-controls {
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .stats-display {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+        .reference-guide {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .reference-guide h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        .code-example {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .volleyball-court {
+                width: 90vw;
+                height: 45vw;
+                max-width: 500px;
+                max-height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏐 Volleyball Court Stat Tracker</h1>
+
+        <div class="main-content">
+            <div class="court-section">
+                <div class="volleyball-court" id="court" onclick="handleCourtClick(event)">
+                    <div class="error-boundary"></div>
+                    <div class="center-line"></div>
+                    <div class="attack-line-left"></div>
+                    <div class="attack-line-right"></div>
+                    <div class="net"></div>
+                    <div class="side-label home-label">HOME</div>
+                    <div class="side-label away-label">AWAY</div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95a5a6;"></div>
+                        <span>Uncoded</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9b59b6;"></div>
+                        <span>Serve</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2ecc71;"></div>
+                        <span>Reception</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3498db;"></div>
+                        <span>Set</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Attack</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <span>Dig</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #1abc9c;"></div>
+                        <span>Freeball</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Error</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="section">
+                    <h3>Code Input</h3>
+                    <div class="reference-guide">
+                        <h4>Code Format: [team][player][skill][grade]</h4>
+                        <strong>Team:</strong> a=away, *=home<br>
+                        <strong>Skills:</strong> S=serve, E=set, A=attack, D=dig, F=freeball, R=reception<br>
+                        <strong>Grades:</strong> #=perfect, +=good, !=medium, -=poor, /=over-pass, ==error<br>
+                        <strong>Note:</strong> Serve codes (S) are notes for the next reception/dig marker<br>
+                        <strong>Trajectories:</strong> Set→Attack, Attack→Dig/Error<br>
+                        <strong>Examples:</strong> <span class="code-example">a14S+</span> <span class="code-example">*10R-</span>
+                    </div>
+                    <textarea id="codeInput" class="code-input" 
+                              placeholder="Enter codes separated by newlines&#10;Example:&#10;a14S+&#10;*10R-&#10;a9A#"></textarea>
+                    <button class="btn btn-primary" onclick="processCodes()">Process Codes</button>
+                    <button class="btn btn-secondary" onclick="clearCodes()">Clear</button>
+                </div>
+
+                <div class="section">
+                    <h3>Court Interaction</h3>
+                    <p>Click on the court to place markers for ball positions.</p>
+                    <button class="btn btn-danger" onclick="clearAllMarkers()">Clear All Markers</button>
+                    <button class="btn btn-secondary" onclick="undoLastMarker()">Undo Last</button>
+                </div>
+
+                <div class="section">
+                    <h3>Heat Map Analysis</h3>
+                    <div class="heat-map-controls">
+                        <button class="heat-map-btn serve" onclick="toggleHeatMap('serve')">Serve Distribution</button>
+                        <button class="heat-map-btn reception" onclick="toggleHeatMap('reception')">Reception Distribution</button>
+                        <button class="heat-map-btn set" onclick="toggleHeatMap('set')">Setter Distribution</button>
+                        <button class="heat-map-btn attack" onclick="toggleHeatMap('attack')">Attack Locations</button>
+                    </div>
+
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label>Team Filter:</label>
+                            <select id="teamFilter" class="filter-select" onchange="updateHeatMapDisplay()">
+                                <option value="all">All Teams</option>
+                                <option value="home">Home Only</option>
+                                <option value="away">Away Only</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Player Filter:</label>
+                            <select id="playerFilter" class="filter-select" onchange="updateHeatMapDisplay()">
+                                <option value="all">All Players</option>
+                            </select>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="showTrajectories" onchange="updateHeatMapDisplay()">
+                            <label for="showTrajectories">Show Trajectories</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Statistics</h3>
+                    <div class="stats-display" id="statsDisplay">
+                        <div class="stat-row">
+                            <span>Total Markers:</span>
+                            <span id="totalMarkers">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Coded Markers:</span>
+                            <span id="codedMarkers">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Serves:</span>
+                            <span id="serveCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Receptions:</span>
+                            <span id="receptionCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Sets:</span>
+                            <span id="setCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Attacks:</span>
+                            <span id="attackCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Digs:</span>
+                            <span id="digCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Freeballs:</span>
+                            <span id="freeballCount">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Errors:</span>
+                            <span id="errorCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <button class="btn btn-success" onclick="exportData()">Export Data</button>
+                    <button class="btn btn-primary" onclick="exportCharts()">Export Charts</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let markers = [];
+        let markerCounter = 0;
+        let activeHeatMaps = [];
+        let trajectories = [];
+        let pendingServeCode = null; // Track serve code for next marker
+
+        // Code parsing functions
+        function parseCode(code) {
+            const cleanCode = code.trim();
+            if (cleanCode.length < 4) return null;
+
+            const team = cleanCode[0] === 'a' ? 'away' : 'home';
+            const player = cleanCode[1] + cleanCode[2];
+            const skill = cleanCode[3];
+            const grade = cleanCode[4] || '';
+
+            const skillMap = {
+                'S': 'serve',  // Serve is just a note, not a marker
+                'E': 'set',
+                'A': 'attack',
+                'D': 'dig',
+                'F': 'freeball',
+                'R': 'reception'
+            };
+
+            const gradeMap = {
+                '#': 'perfect',
+                '+': 'good',
+                '!': 'medium',
+                '-': 'poor',
+                '/': 'over-pass',
+                '=': 'error'
+            };
+
+            return {
+                team: team,
+                player: player,
+                skill: skillMap[skill] || 'unknown',
+                grade: gradeMap[grade] || 'unknown',
+                originalCode: cleanCode
+            };
+        }
+
+        function processCodes() {
+            const codeInput = document.getElementById('codeInput');
+            const codes = codeInput.value.split('\n').filter(code => code.trim());
+            
+            codes.forEach(code => {
+                const parsed = parseCode(code);
+                if (parsed) {
+                    if (parsed.skill === 'serve') {
+                        // Store serve code for next marker
+                        pendingServeCode = parsed;
+                    } else {
+                        // Find the most recent uncoded marker
+                        const uncodedMarker = markers.find(m => !m.code);
+                        if (uncodedMarker) {
+                            applyCodeToMarker(uncodedMarker, parsed);
+                        }
+                    }
+                }
+            });
+
+            updateStats();
+            updatePlayerFilter();
+            updateHeatMapDisplay();
+        }
+
+        function applyCodeToMarker(marker, codeData) {
+            marker.code = codeData.originalCode;
+            marker.team = codeData.team;
+            marker.player = codeData.player;
+            marker.skill = codeData.skill;
+            marker.grade = codeData.grade;
+
+            // If there was a pending serve code, mark this as "off serve"
+            if (pendingServeCode && (codeData.skill === 'reception' || codeData.skill === 'dig')) {
+                marker.offServe = true;
+                marker.serveCode = pendingServeCode.originalCode;
+                pendingServeCode = null; // Clear the pending serve code
+            }
+
+            // Update marker appearance
+            marker.element.className = `hit-marker ${codeData.skill}`;
+            marker.element.title = `${codeData.originalCode} - ${codeData.team} player ${codeData.player}${marker.offServe ? ' (off serve)' : ''}`;
+
+            // Check for trajectory connections
+            checkForTrajectories(marker);
+        }
+
+        function trackTrajectory(marker) {
+            console.log(`Tracking trajectory for marker ${marker.id} with skill ${marker.skill}`);
+            
+            // Track attack -> dig/error trajectories
+            // The attack marker connects to where it lands (dig or error)
+            if (marker.skill === 'attack') {
+                console.log(`Looking for landing marker for attack ${marker.id}`);
+                
+                // Look for next marker (dig or error) that represents where attack landed
+                const landingMarker = markers.find(m => 
+                    (m.skill === 'dig' || m.skill === 'error' || m.grade === 'error') && 
+                    m !== marker && 
+                    !m.trajectoryFrom &&
+                    m.id > marker.id // Next marker in sequence
+                );
+                
+                if (landingMarker) {
+                    console.log(`Found landing marker ${landingMarker.id} for attack ${marker.id}`);
+                    createTrajectory(marker, landingMarker);
+                } else {
+                    console.log(`No landing marker found for attack ${marker.id}`);
+                }
+            }
+        }
+
+        function checkForTrajectories(newMarker) {
+            console.log(`Checking trajectories for marker ${newMarker.id} with skill ${newMarker.skill}`);
+            
+            // If this is an attack, look for previous set markers
+            if (newMarker.skill === 'attack') {
+                const setMarker = markers.find(m => 
+                    m.skill === 'set' && 
+                    m !== newMarker && 
+                    !m.trajectoryTo &&
+                    m.id < newMarker.id // Previous marker in sequence
+                );
+                
+                if (setMarker) {
+                    console.log(`Found set marker ${setMarker.id} for attack ${newMarker.id}`);
+                    createTrajectory(setMarker, newMarker);
+                }
+            }
+            
+            // If this is a set, look for previous attack markers
+            if (newMarker.skill === 'set') {
+                const attackMarker = markers.find(m => 
+                    m.skill === 'attack' && 
+                    m !== newMarker && 
+                    !m.trajectoryFrom &&
+                    m.id > newMarker.id // Next marker in sequence
+                );
+                
+                if (attackMarker) {
+                    console.log(`Found attack marker ${attackMarker.id} for set ${newMarker.id}`);
+                    createTrajectory(newMarker, attackMarker);
+                }
+            }
+            
+            // If this is an attack, look for previous dig/error markers
+            if (newMarker.skill === 'attack') {
+                const landingMarker = markers.find(m => 
+                    (m.skill === 'dig' || m.skill === 'error' || m.grade === 'error') && 
+                    m !== newMarker && 
+                    !m.trajectoryFrom &&
+                    m.id < newMarker.id // Previous marker in sequence
+                );
+                
+                if (landingMarker) {
+                    console.log(`Found landing marker ${landingMarker.id} for attack ${newMarker.id}`);
+                    createTrajectory(landingMarker, newMarker);
+                }
+            }
+            
+            // If this is a dig/error, look for previous attack markers
+            if (newMarker.skill === 'dig' || newMarker.skill === 'error' || newMarker.grade === 'error') {
+                const attackMarker = markers.find(m => 
+                    m.skill === 'attack' && 
+                    m !== newMarker && 
+                    !m.trajectoryTo &&
+                    m.id < newMarker.id // Previous marker in sequence
+                );
+                
+                if (attackMarker) {
+                    console.log(`Found attack marker ${attackMarker.id} for landing ${newMarker.id}`);
+                    createTrajectory(attackMarker, newMarker);
+                }
+            }
+        }
+
+        function createTrajectory(fromMarker, toMarker) {
+            console.log(`Creating trajectory from ${fromMarker.id} to ${toMarker.id}`);
+            
+            const court = document.getElementById('court');
+            const trajectory = document.createElement('div');
+            trajectory.className = 'trajectory-line';
+            
+            const fromX = fromMarker.x;
+            const fromY = fromMarker.y;
+            const toX = toMarker.x;
+            const toY = toMarker.y;
+            
+            console.log(`From: (${fromX}, ${fromY}), To: (${toX}, ${toY})`);
+            
+            const distance = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
+            const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+            
+            console.log(`Distance: ${distance}, Angle: ${angle}`);
+            
+            trajectory.style.left = fromX + 'px';
+            trajectory.style.top = fromY + 'px';
+            trajectory.style.width = distance + 'px';
+            trajectory.style.transform = `rotate(${angle}deg)`;
+            trajectory.style.display = 'block';
+            
+            court.appendChild(trajectory);
+            
+            fromMarker.trajectoryTo = trajectory;
+            toMarker.trajectoryFrom = trajectory;
+            
+            trajectories.push({
+                from: fromMarker,
+                to: toMarker,
+                element: trajectory
+            });
+
+            console.log(`Created trajectory from marker ${fromMarker.id} to marker ${toMarker.id}`);
+            console.log(`Total trajectories: ${trajectories.length}`);
+        }
+
+        function isErrorServe(x, y) {
+            // Check if the click is outside the court boundary (error serve)
+            return x < 0 || x > 540 || y < 0 || y > 270;
+        }
+
+        function handleCourtClick(event) {
+            const court = document.getElementById('court');
+            const rect = court.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Check if this is an error (outside court)
+            if (isErrorServe(x, y)) {
+                // Create error marker outside court
+                addErrorMarker(x, y);
+            } else {
+                addMarker(event);
+            }
+        }
+
+        function addMarker(event) {
+            const court = document.getElementById('court');
+            const rect = court.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const marker = document.createElement('div');
+            marker.className = 'hit-marker uncoded';
+            marker.style.left = x + 'px';
+            marker.style.top = y + 'px';
+            marker.textContent = ++markerCounter;
+            marker.id = `marker-${markerCounter}`;
+            
+            court.appendChild(marker);
+            
+            const markerData = {
+                id: markerCounter,
+                x: x,
+                y: y,
+                element: marker,
+                code: null,
+                team: null,
+                player: null,
+                skill: 'uncoded',
+                grade: null,
+                timestamp: new Date().toLocaleTimeString(),
+                trajectoryFrom: null,
+                trajectoryTo: null
+            };
+            
+            markers.push(markerData);
+            
+            // Check for trajectory connections immediately
+            checkForTrajectories(markerData);
+            
+            updateStats();
+        }
+
+        function addErrorMarker(x, y) {
+            const court = document.getElementById('court');
+            
+            const marker = document.createElement('div');
+            marker.className = 'hit-marker error';
+            marker.style.left = x + 'px';
+            marker.style.top = y + 'px';
+            marker.textContent = ++markerCounter;
+            marker.id = `marker-${markerCounter}`;
+            marker.style.borderColor = '#e74c3c';
+            marker.style.backgroundColor = '#e74c3c';
+            
+            court.appendChild(marker);
+            
+            const markerData = {
+                id: markerCounter,
+                x: x,
+                y: y,
+                element: marker,
+                code: null,
+                team: null,
+                player: null,
+                skill: 'error',
+                grade: 'error',
+                timestamp: new Date().toLocaleTimeString(),
+                trajectoryFrom: null,
+                trajectoryTo: null,
+                isError: true
+            };
+            
+            markers.push(markerData);
+            updateStats();
+        }
+
+        function undoLastMarker() {
+            if (markers.length > 0) {
+                const lastMarker = markers.pop();
+                if (lastMarker.trajectoryTo) {
+                    lastMarker.trajectoryTo.remove();
+                }
+                if (lastMarker.trajectoryFrom) {
+                    lastMarker.trajectoryFrom.remove();
+                }
+                lastMarker.element.remove();
+                markerCounter--;
+                updateStats();
+                updatePlayerFilter();
+                updateHeatMapDisplay();
+            }
+        }
+
+        function clearAllMarkers() {
+            if (confirm('Clear all markers? This cannot be undone.')) {
+                markers.forEach(marker => {
+                    marker.element.remove();
+                    if (marker.trajectoryTo) marker.trajectoryTo.remove();
+                    if (marker.trajectoryFrom) marker.trajectoryFrom.remove();
+                });
+                markers = [];
+                markerCounter = 0;
+                trajectories = [];
+                updateStats();
+                updatePlayerFilter();
+                updateHeatMapDisplay();
+            }
+        }
+
+        function clearCodes() {
+            document.getElementById('codeInput').value = '';
+        }
+
+        // Heat map functions
+        function toggleHeatMap(heatMapType) {
+            const btn = document.querySelector(`.heat-map-btn.${heatMapType}`);
+            
+            if (activeHeatMaps.includes(heatMapType)) {
+                activeHeatMaps = activeHeatMaps.filter(type => type !== heatMapType);
+                btn.classList.remove('active');
+            } else {
+                activeHeatMaps.push(heatMapType);
+                btn.classList.add('active');
+            }
+            
+            updateHeatMapDisplay();
+        }
+
+        function updateHeatMapDisplay() {
+            const teamFilter = document.getElementById('teamFilter').value;
+            const playerFilter = document.getElementById('playerFilter').value;
+            const showTrajectories = document.getElementById('showTrajectories').checked;
+
+            markers.forEach(marker => {
+                let shouldShow = false;
+
+                // Check if marker matches active heat map types
+                if (activeHeatMaps.length === 0) {
+                    shouldShow = true;
+                } else {
+                    // Serve distribution: only show receptions/digs that are off serve
+                    if (activeHeatMaps.includes('serve')) {
+                        shouldShow = marker.skill === 'serve' || 
+                                   (marker.skill === 'reception' && marker.offServe) ||
+                                   (marker.skill === 'dig' && marker.offServe);
+                    }
+                    // Reception distribution: show all receptions and digs
+                    else if (activeHeatMaps.includes('reception')) {
+                        shouldShow = marker.skill === 'reception' || marker.skill === 'dig';
+                    }
+                    // Other heat maps: normal skill matching
+                    else {
+                        shouldShow = activeHeatMaps.includes(marker.skill);
+                    }
+                }
+
+                // Apply team filter
+                if (teamFilter !== 'all' && marker.team !== teamFilter) {
+                    shouldShow = false;
+                }
+
+                // Apply player filter
+                if (playerFilter !== 'all' && marker.player !== playerFilter) {
+                    shouldShow = false;
+                }
+
+                // Show/hide marker
+                marker.element.style.display = shouldShow ? 'flex' : 'none';
+                marker.element.style.opacity = shouldShow ? '1' : '0';
+            });
+
+            // Show/hide trajectories based on active heat maps and checkbox
+            trajectories.forEach(traj => {
+                let shouldShowTrajectory = false;
+                
+                if (showTrajectories) {
+                    // Attack to dig/error trajectories: only show when "attack" heat map is active
+                    if ((traj.from.skill === 'attack' && (traj.to.skill === 'dig' || traj.to.skill === 'error' || traj.to.grade === 'error')) ||
+                        (traj.to.skill === 'attack' && (traj.from.skill === 'dig' || traj.from.skill === 'error' || traj.from.grade === 'error'))) {
+                        shouldShowTrajectory = activeHeatMaps.includes('attack');
+                    }
+                    // Set to attack trajectories: only show when "set" heat map is active
+                    else if ((traj.from.skill === 'set' && traj.to.skill === 'attack') ||
+                             (traj.to.skill === 'set' && traj.from.skill === 'attack')) {
+                        shouldShowTrajectory = activeHeatMaps.includes('set');
+                    }
+                }
+                
+                traj.element.style.display = shouldShowTrajectory ? 'block' : 'none';
+            });
+        }
+
+        function updatePlayerFilter() {
+            const playerFilter = document.getElementById('playerFilter');
+            const players = [...new Set(markers.map(m => m.player).filter(p => p))];
+            
+            playerFilter.innerHTML = '<option value="all">All Players</option>';
+            players.forEach(player => {
+                const option = document.createElement('option');
+                option.value = player;
+                option.textContent = `Player ${player}`;
+                playerFilter.appendChild(option);
+            });
+        }
+
+        // Statistics functions
+        function updateStats() {
+            const total = markers.length;
+            const coded = markers.filter(m => m.code).length;
+            
+            const stats = {
+                serve: markers.filter(m => m.skill === 'serve').length,
+                reception: markers.filter(m => m.skill === 'reception').length,
+                set: markers.filter(m => m.skill === 'set').length,
+                attack: markers.filter(m => m.skill === 'attack').length,
+                dig: markers.filter(m => m.skill === 'dig').length,
+                freeball: markers.filter(m => m.skill === 'freeball').length,
+                error: markers.filter(m => m.skill === 'error').length
+            };
+
+            document.getElementById('totalMarkers').textContent = total;
+            document.getElementById('codedMarkers').textContent = coded;
+            document.getElementById('serveCount').textContent = stats.serve;
+            document.getElementById('receptionCount').textContent = stats.reception;
+            document.getElementById('setCount').textContent = stats.set;
+            document.getElementById('attackCount').textContent = stats.attack;
+            document.getElementById('digCount').textContent = stats.dig;
+            document.getElementById('freeballCount').textContent = stats.freeball;
+            document.getElementById('errorCount').textContent = stats.error;
+        }
+
+        function exportData() {
+            const data = {
+                markers: markers.map(marker => ({
+                    id: marker.id,
+                    x: Math.round(marker.x),
+                    y: Math.round(marker.y),
+                    code: marker.code,
+                    team: marker.team,
+                    player: marker.player,
+                    skill: marker.skill,
+                    grade: marker.grade,
+                    timestamp: marker.timestamp
+                })),
+                trajectories: trajectories.map(traj => ({
+                    from: traj.from.id,
+                    to: traj.to.id
+                })),
+                summary: {
+                    total: markers.length,
+                    coded: markers.filter(m => m.code).length,
+                    bySkill: {
+                        serve: markers.filter(m => m.skill === 'serve').length,
+                        reception: markers.filter(m => m.skill === 'reception').length,
+                        set: markers.filter(m => m.skill === 'set').length,
+                        attack: markers.filter(m => m.skill === 'attack').length,
+                        dig: markers.filter(m => m.skill === 'dig').length,
+                        freeball: markers.filter(m => m.skill === 'freeball').length,
+                        error: markers.filter(m => m.skill === 'error').length
+                    }
+                },
+                exportedAt: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `volleyball-stats-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportCharts() {
+            const charts = [];
+            
+            // Create statistical charts
+            const teams = ['home', 'away'];
+            teams.forEach(team => {
+                const teamMarkers = markers.filter(m => m.team === team);
+                if (teamMarkers.length > 0) {
+                    charts.push(createTeamChart(team, teamMarkers));
+                }
+            });
+            
+            const players = [...new Set(markers.map(m => m.player).filter(p => p))];
+            players.forEach(player => {
+                const playerMarkers = markers.filter(m => m.player === player);
+                if (playerMarkers.length > 0) {
+                    charts.push(createPlayerChart(player, playerMarkers));
+                }
+            });
+            
+            // Create heat map images for each team
+            const heatMapTypes = ['serve', 'reception', 'set', 'attack'];
+            const teamsForHeatMaps = ['home', 'away'];
+            
+            heatMapTypes.forEach(heatMapType => {
+                teamsForHeatMaps.forEach(team => {
+                    const heatMapCanvas = createHeatMapImage(heatMapType, team);
+                    if (heatMapCanvas) {
+                        charts.push(heatMapCanvas);
+                    }
+                });
+            });
+            
+            // Combine all charts into one image
+            if (charts.length > 0) {
+                combineCharts(charts);
+            }
+        }
+
+        function createHeatMapImage(heatMapType, team) {
+            const court = document.getElementById('court');
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Title
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${team.toUpperCase()} TEAM - ${heatMapType.toUpperCase()} DISTRIBUTION`, 400, 40);
+            
+            // Draw court background
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(100, 80, 600, 300);
+            
+            // Draw court lines
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            
+            // Center line
+            ctx.beginPath();
+            ctx.moveTo(400, 80);
+            ctx.lineTo(400, 380);
+            ctx.stroke();
+            
+            // Attack lines
+            ctx.beginPath();
+            ctx.moveTo(280, 80);
+            ctx.lineTo(280, 380);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(520, 80);
+            ctx.lineTo(520, 380);
+            ctx.stroke();
+            
+            // Net
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(400, 72);
+            ctx.lineTo(400, 388);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('HOME', 300, 370);
+            ctx.fillText('AWAY', 500, 110);
+            
+            // Get markers for this heat map type and team
+            let relevantMarkers = [];
+            
+            if (heatMapType === 'serve') {
+                relevantMarkers = markers.filter(m => 
+                    m.team === team && (
+                        m.skill === 'serve' || 
+                        (m.skill === 'reception' && m.offServe) ||
+                        (m.skill === 'dig' && m.offServe)
+                    )
+                );
+            } else if (heatMapType === 'reception') {
+                relevantMarkers = markers.filter(m => 
+                    m.team === team && (m.skill === 'reception' || m.skill === 'dig')
+                );
+            } else if (heatMapType === 'set') {
+                relevantMarkers = markers.filter(m => m.team === team && m.skill === 'set');
+            } else if (heatMapType === 'attack') {
+                relevantMarkers = markers.filter(m => m.team === team && m.skill === 'attack');
+            }
+            
+            // Only create chart if there are markers
+            if (relevantMarkers.length === 0) {
+                return null;
+            }
+            
+            // Draw markers
+            relevantMarkers.forEach(marker => {
+                const x = 100 + (marker.x / 540) * 600;
+                const y = 80 + (marker.y / 270) * 300;
+                
+                // Marker circle
+                ctx.fillStyle = getSkillColor(marker.skill);
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Border
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Player number
+                if (marker.player) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(marker.player, x, y + 3);
+                }
+            });
+            
+            // Add legend
+            const legendY = 420;
+            const legendItems = getLegendItems(heatMapType);
+            legendItems.forEach((item, index) => {
+                const x = 150 + index * 150;
+                
+                // Color box
+                ctx.fillStyle = item.color;
+                ctx.fillRect(x, legendY, 12, 12);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, legendY, 12, 12);
+                
+                // Label
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(item.label, x + 20, legendY + 10);
+            });
+            
+            return canvas;
+        }
+
+        function getLegendItems(heatMapType) {
+            if (heatMapType === 'serve') {
+                return [
+                    { color: '#9b59b6', label: 'Serve' },
+                    { color: '#2ecc71', label: 'Reception (off serve)' },
+                    { color: '#f39c12', label: 'Dig (off serve)' }
+                ];
+            } else if (heatMapType === 'reception') {
+                return [
+                    { color: '#2ecc71', label: 'Reception' },
+                    { color: '#f39c12', label: 'Dig' }
+                ];
+            } else if (heatMapType === 'set') {
+                return [
+                    { color: '#3498db', label: 'Set' }
+                ];
+            } else if (heatMapType === 'attack') {
+                return [
+                    { color: '#e74c3c', label: 'Attack' }
+                ];
+            }
+            return [];
+        }
+
+        function createTeamChart(team, markers) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Title
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${team.toUpperCase()} TEAM - SKILL DISTRIBUTION`, 400, 40);
+            
+            // Skill counts
+            const skills = ['serve', 'reception', 'set', 'attack', 'dig', 'freeball', 'error'];
+            const skillCounts = {};
+            skills.forEach(skill => {
+                skillCounts[skill] = markers.filter(m => m.skill === skill).length;
+            });
+            
+            // Create bar chart
+            const barWidth = 80;
+            const barSpacing = 20;
+            const startX = 100;
+            const startY = 500;
+            const maxHeight = 300;
+            const maxCount = Math.max(...Object.values(skillCounts));
+            
+            skills.forEach((skill, index) => {
+                const x = startX + index * (barWidth + barSpacing);
+                const height = (skillCounts[skill] / maxCount) * maxHeight;
+                const y = startY - height;
+                
+                // Bar
+                ctx.fillStyle = getSkillColor(skill);
+                ctx.fillRect(x, y, barWidth, height);
+                
+                // Label
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(skill.toUpperCase(), x + barWidth/2, startY + 20);
+                ctx.fillText(skillCounts[skill], x + barWidth/2, y - 10);
+            });
+            
+            return canvas;
+        }
+
+        function createPlayerChart(player, markers) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Title
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`PLAYER ${player}`, 200, 25);
+            
+            // Skill counts
+            const skills = ['serve', 'reception', 'set', 'attack', 'dig', 'freeball', 'error'];
+            const skillCounts = {};
+            skills.forEach(skill => {
+                skillCounts[skill] = markers.filter(m => m.skill === skill).length;
+            });
+            
+            // Create pie chart
+            const centerX = 200;
+            const centerY = 180;
+            const radius = 80;
+            let currentAngle = 0;
+            
+            skills.forEach(skill => {
+                const count = skillCounts[skill];
+                if (count > 0) {
+                    const sliceAngle = (count / markers.length) * 2 * Math.PI;
+                    
+                    // Slice
+                    ctx.fillStyle = getSkillColor(skill);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Label
+                    const labelAngle = currentAngle + sliceAngle / 2;
+                    const labelX = centerX + Math.cos(labelAngle) * (radius + 20);
+                    const labelY = centerY + Math.sin(labelAngle) * (radius + 20);
+                    
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${skill}: ${count}`, labelX, labelY);
+                    
+                    currentAngle += sliceAngle;
+                }
+            });
+            
+            return canvas;
+        }
+
+        function getSkillColor(skill) {
+            const colors = {
+                'serve': '#9b59b6',
+                'reception': '#2ecc71',
+                'set': '#3498db',
+                'attack': '#e74c3c',
+                'dig': '#f39c12',
+                'freeball': '#1abc9c',
+                'error': '#e74c3c'
+            };
+            return colors[skill] || '#95a5a6';
+        }
+
+        function combineCharts(charts) {
+            const totalWidth = 1600;
+            const totalHeight = Math.ceil(charts.length / 2) * 400;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = totalWidth;
+            canvas.height = totalHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, totalWidth, totalHeight);
+            
+            // Add title
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('VOLLEYBALL STATISTICS REPORT', totalWidth/2, 40);
+            
+            // Arrange charts in 2 columns
+            charts.forEach((chart, index) => {
+                const row = Math.floor(index / 2);
+                const col = index % 2;
+                const x = col * 800;
+                const y = 80 + row * 400;
+                
+                ctx.drawImage(chart, x, y);
+            });
+            
+            // Export as image
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `volleyball-charts-${new Date().toISOString().split('T')[0]}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+
+        // Initialize
+        updateStats();
+    </script>
+</body>
+</html>
